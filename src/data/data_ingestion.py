@@ -3,50 +3,72 @@ import os
 import yaml
 import logging
 from sklearn.model_selection import train_test_split
-from src.logger import logging # Using your custom logger
-from src.connections.s3_connection import s3_operations # Import S3 operations
+from src.logger import logging 
+from src.connections.s3_connection import s3_operations 
 
 def load_params(params_path: str) -> dict:
-    with open(params_path, 'r') as file:
-        return yaml.safe_load(file)
+    """Load parameters from a YAML file with error handling."""
+    try:
+        with open(params_path, 'r') as file:
+            params = yaml.safe_load(file)
+        logging.info(f"Successfully retrieved parameters from {params_path}")
+        return params
+    except FileNotFoundError:
+        logging.error(f"Critical Error: Parameter file '{params_path}' not found.")
+        raise
+    except yaml.YAMLError as e:
+        logging.error(f"Error parsing YAML file: {e}")
+        raise
+
+def load_data(data_path: str) -> pd.DataFrame:
+    """Load the raw CSV from disk."""
+    try:
+        logging.info(f"Attempting to load raw data from: {data_path}")
+        df = pd.read_csv(data_path)
+        logging.info(f"Data successfully loaded. Shape: {df.shape}")
+        return df
+    except Exception as e:
+        logging.error(f"Failed to load data from {data_path}: {e}")
+        raise
 
 def main():
     try:
-        logging.info("--- Starting Data Ingestion ---")
-        config = load_params('params.yaml')
+        logging.info("--- Data Ingestion Process Started ---")
         
+        # Load Config
+        config = load_params('params.yaml')
         raw_data_path = config['data_ingestion']['raw_data_path']
         test_size = config['data_ingestion']['test_size']
         
-        # --- OPTION 1: LOCAL LOADING ---
-        logging.info(f"Loading raw data from {raw_data_path}")
-        df = pd.read_csv(raw_data_path)
+        # Data Loading
+        df = load_data(raw_data_path)
         
-        # --- OPTION 2: S3 LOADING (Uncomment to use) ---
-        # s3 = s3_operations(bucket_name="my-uber-bucket", 
-        #                   aws_access_key="YOUR_KEY", 
-        #                   aws_secret_key="YOUR_SECRET")
-        # df = s3.fetch_file_from_s3(file_key="raw/uber.csv")
-        
-        # Initial Cleaning (Drop columns we don't need at all)
+        # Initial Drop
+        logging.info("Dropping unnecessary columns: ['Unnamed: 0', 'key']")
         df = df.drop(['Unnamed: 0', 'key'], axis=1)
-        
-        # Train-Test Split
-        logging.info(f"Splitting data with test_size={test_size}")
+
+        # Splitting
+        logging.info(f"Initiating Train-Test split (Test Size: {test_size})")
         train_data, test_data = train_test_split(df, test_size=test_size, random_state=42)
         
-        # Create directories if they don't exist
+        # Directory Creation
         output_dir = "data/raw"
-        os.makedirs(output_dir, exist_ok=True)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            logging.info(f"Created directory: {output_dir}")
         
-        # Save split data
-        train_data.to_csv(os.path.join(output_dir, "train.csv"), index=False)
-        test_data.to_csv(os.path.join(output_dir, "test.csv"), index=False)
+        # Saving
+        train_path = os.path.join(output_dir, "train.csv")
+        test_path = os.path.join(output_dir, "test.csv")
         
-        logging.info("✅ Ingestion Complete: train.csv and test.csv created in data/raw/")
+        logging.info(f"Saving splits. Train rows: {len(train_data)}, Test rows: {len(test_data)}")
+        train_data.to_csv(train_path, index=False)
+        test_data.to_csv(test_path, index=False)
         
+        logging.info(f"✅ Ingestion Successful: Files saved to {train_path} and {test_path}")
+
     except Exception as e:
-        logging.error(f"Error in data ingestion: {e}", exc_info=True)
+        logging.error(f"❌ Data Ingestion Failed: {e}", exc_info=True)
 
 if __name__ == "__main__":
     main()
