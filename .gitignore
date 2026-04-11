@@ -68,7 +68,7 @@ target/
 
 # VS Code
 .vscode/
-models
+/models/
 
 # Spyder
 .spyproject/

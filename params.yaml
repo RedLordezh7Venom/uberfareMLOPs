@@ -10,3 +10,8 @@ data_preprocessing:
 feature_engineering:
   features: ["dist_km", "hour", "day", "month", "year", "dayofweek", "passenger_count"]
   target: "fare_amount"
+
+model_building:
+  max_depth: 10
+  max_leaf_nodes: 32
+  random_state: 10
