@@ -7,6 +7,8 @@ import mlflow
 import dagshub
 import logging
 
+import os
+
 # ========================== CONFIGURATION ==========================
 CONFIG = {
     "repo_owner": "RedLordezh7Venom",
@@ -14,7 +16,11 @@ CONFIG = {
     "experiment_name": "Feature Impact Analysis"
 }
 
-dagshub.init(repo_owner=CONFIG["repo_owner"], repo_name=CONFIG["repo_name"], border=True)
+# Calculated Path to data
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, "..", "data", "raw", "uber.csv")
+
+dagshub.init(repo_owner=CONFIG["repo_owner"], repo_name=CONFIG["repo_name"])
 mlflow.set_experiment(CONFIG["experiment_name"])
 
 # ========================== FEATURE ENGINEERING ==========================

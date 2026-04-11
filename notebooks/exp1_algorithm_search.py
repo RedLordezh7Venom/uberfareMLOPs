@@ -12,6 +12,8 @@ import dagshub
 import logging
 import time
 
+import os
+
 # ========================== CONFIGURATION ==========================
 CONFIG = {
     "repo_owner": "RedLordezh7Venom",
@@ -21,13 +23,17 @@ CONFIG = {
     "random_state": 10
 }
 
+# Calculated Path to data
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, "..", "data", "raw", "uber.csv")
+
 # Setup DagsHub & MLflow
-dagshub.init(repo_owner=CONFIG["repo_owner"], repo_name=CONFIG["repo_name"], border=True)
+dagshub.init(repo_owner=CONFIG["repo_owner"], repo_name=CONFIG["repo_name"])
 mlflow.set_experiment(CONFIG["experiment_name"])
 
 # ========================== DATA LOADING ==========================
 def load_clean_data():
-    df = pd.read_csv('../data/raw/uber.csv')
+    df = pd.read_csv(DATA_PATH)
     df = df.drop(['Unnamed: 0', 'key'], axis=1)
     df.dropna(inplace=True)
     df = df[df['fare_amount'] > 0]
