@@ -6,3 +6,7 @@ data_ingestion:
 data_preprocessing:
   test_size: 0.2
   random_state: 42
+
+feature_engineering:
+  features: ["dist_km", "hour", "day", "month", "year", "dayofweek", "passenger_count"]
+  target: "fare_amount"
