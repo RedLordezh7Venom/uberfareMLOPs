@@ -1,0 +1,37 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:            fare_amount   R-squared:                       0.748
+Model:                            OLS   Adj. R-squared:                  0.748
+Method:                 Least Squares   F-statistic:                 4.324e+04
+Date:                Sun, 12 Apr 2026   Prob (F-statistic):               0.00
+Time:                        00:09:38   Log-Likelihood:            -3.8768e+05
+No. Observations:              159986   AIC:                         7.754e+05
+Df Residuals:                  159974   BIC:                         7.755e+05
+Df Model:                          11                                         
+Covariance Type:            nonrobust                                         
+=====================================================================================
+                        coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------------
+const              2771.8110     34.722     79.828      0.000    2703.756    2839.866
+pickup_longitude     17.2685      0.390     44.242      0.000      16.503      18.034
+pickup_latitude      -9.5087      0.331    -28.768      0.000     -10.157      -8.861
+dropoff_longitude    15.0872      0.355     42.529      0.000      14.392      15.782
+dropoff_latitude    -17.4667      0.295    -59.291      0.000     -18.044     -16.889
+passenger_count       0.0571      0.008      7.324      0.000       0.042       0.072
+hour                  0.0094      0.001      8.947      0.000       0.007       0.012
+day                   0.0025      0.001      3.224      0.001       0.001       0.004
+month                 0.0558      0.002     27.930      0.000       0.052       0.060
+year                  0.3603      0.004     97.254      0.000       0.353       0.368
+dayofweek            -0.0343      0.004     -9.709      0.000      -0.041      -0.027
+dist_travel_km        1.9980      0.003    636.753      0.000       1.992       2.004
+==============================================================================
+Omnibus:                    58742.885   Durbin-Watson:                   2.000
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):           806123.914
+Skew:                           1.385   Prob(JB):                         0.00
+Kurtosis:                      13.642   Cond. No.                     1.03e+07
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+[2] The condition number is large, 1.03e+07. This might indicate that there are
+strong multicollinearity or other numerical problems.
