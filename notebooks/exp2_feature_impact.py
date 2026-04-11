@@ -35,7 +35,7 @@ def haversine_np(lon1, lat1, lon2, lat2):
     return km
 
 def load_data():
-    df = pd.read_csv('../data/raw/uber.csv')
+    df = pd.read_csv(DATA_PATH)
     df.dropna(inplace=True)
     df = df[df['fare_amount'] > 0]
     return df
