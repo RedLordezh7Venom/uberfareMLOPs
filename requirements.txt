@@ -1,5 +1,3 @@
-# local package
--e .
 
 # external requirements
 click
@@ -8,3 +6,12 @@ coverage
 awscli
 flake8
 python-dotenv>=0.5.1
+pandas
+numpy
+seaborn
+matplotlib
+scikit-learn
+statsmodels
+ipykernel
+notebook
+pylab-sdk
