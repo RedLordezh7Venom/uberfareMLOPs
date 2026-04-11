@@ -1,0 +1,8 @@
+data_ingestion:
+  raw_data_path: "data/raw/uber.csv"
+  test_size: 0.2
+  random_state: 42
+
+data_preprocessing:
+  test_size: 0.2
+  random_state: 42
