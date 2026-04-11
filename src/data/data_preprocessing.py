@@ -61,6 +61,11 @@ def main():
         processed_train.to_csv(os.path.join(output_dir, "train_processed.csv"), index=False)
         processed_test.to_csv(os.path.join(output_dir, "test_processed.csv"), index=False)
         
+        # --- OPTION: UPLOAD PROCESSED DATA TO S3 (Uncomment to use) ---
+        # from src.connections.s3_connection import s3_operations
+        # s3 = s3_operations(bucket_name="my-uber-bucket", aws_access_key="...", aws_secret_key="...")
+        # s3.s3_client.upload_file(os.path.join(output_dir, "train_processed.csv"), "my-uber-bucket", "processed/train.csv")
+        
         logging.info("✅ Preprocessing Complete: train_processed.csv and test_processed.csv created in data/processed/")
         
     except Exception as e:
