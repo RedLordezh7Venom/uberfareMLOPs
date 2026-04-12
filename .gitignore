@@ -79,6 +79,7 @@ target/
 
 # exclude data from source control by default
 /data/
+/local_s3/
 
 # Mac OS-specific storage files
 .DS_Store
