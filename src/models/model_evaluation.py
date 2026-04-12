@@ -33,6 +33,17 @@ def evaluate_model(model, X_test, y_test):
         logging.error(f"Error during evaluation: {e}")
         raise
 
+def save_model_info(run_id: str, model_path: str, file_path: str) -> None:
+    """Save the model run ID and path to a JSON file."""
+    try:
+        model_info = {'run_id': run_id, 'model_path': model_path}
+        with open(file_path, 'w') as file:
+            json.dump(model_info, file, indent=4)
+        logging.info(f'Model info saved to {file_path}')
+    except Exception as e:
+        logging.error(f'Error occurred while saving the model info: {e}')
+        raise
+
 def main():
     try:
         logging.info("--- Model Evaluation Process Started ---")
@@ -57,7 +68,7 @@ def main():
         # mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
         # # -------------------------------------------------------------------------------------
 
-        dagshub.init(repo_owner='RedLordezh7Venom', repo_name='uberfareMLOPs', border=True)
+        dagshub.init(repo_owner='RedLordezh7Venom', repo_name='uberfareMLOPs')
         mlflow.set_experiment("UberFare_Production_Pipeline")
 
         with mlflow.start_run() as run:
@@ -90,6 +101,9 @@ def main():
             
             # Log artifacts
             mlflow.log_artifact('reports/metrics.json')
+
+            # 6. Save Model Info (For Registry)
+            save_model_info(run.info.run_id, "model", 'reports/experiment_info.json')
             
             logging.info(f"✅ Evaluation Complete. RMSE: {metrics['rmse']}")
 
