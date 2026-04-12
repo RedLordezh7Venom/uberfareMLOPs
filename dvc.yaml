@@ -1,6 +1,6 @@
 stages:
   data_ingestion:
-    cmd: python -m src.data.data_ingestion
+    cmd: uv run python -m src.data.data_ingestion
     deps:
     - data/raw/uber.csv
     - src/data/data_ingestion.py
@@ -11,7 +11,7 @@ stages:
     - data/raw/test.csv
 
   data_preprocessing:
-    cmd: python -m src.data.data_preprocessing
+    cmd: uv run python -m src.data.data_preprocessing
     deps:
     - data/raw/train.csv
     - data/raw/test.csv
@@ -21,7 +21,7 @@ stages:
     - data/processed/test_processed.csv
 
   feature_engineering:
-    cmd: python -m src.features.feature_engineering
+    cmd: uv run python -m src.features.feature_engineering
     deps:
     - data/processed/train_processed.csv
     - data/processed/test_processed.csv
@@ -35,7 +35,7 @@ stages:
     - models/scaler.pkl
 
   model_building:
-    cmd: python -m src.models.model_building
+    cmd: uv run python -m src.models.model_building
     deps:
     - data/processed/train_final.csv
     - src/models/model_building.py
@@ -46,7 +46,7 @@ stages:
     - models/model.pkl
 
   model_evaluation:
-    cmd: python -m src.models.model_evaluation
+    cmd: uv run python -m src.models.model_evaluation
     deps:
     - models/model.pkl
     - data/processed/test_final.csv
@@ -57,7 +57,7 @@ stages:
     - reports/experiment_info.json
 
   model_registration:
-    cmd: python -m src.models.register_model
+    cmd: uv run python -m src.models.register_model
     deps:
     - reports/experiment_info.json
     - src/models/register_model.py

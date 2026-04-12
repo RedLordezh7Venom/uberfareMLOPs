@@ -1,7 +1,7 @@
 schema: '2.0'
 stages:
   data_ingestion:
-    cmd: python -m src.data.data_ingestion
+    cmd: uv run python -m src.data.data_ingestion
     deps:
     - path: data/raw/uber.csv
       hash: md5
@@ -24,7 +24,7 @@ stages:
       md5: 3a7a008fa7ae4904ec3f509750b7176e
       size: 12500158
   data_preprocessing:
-    cmd: python -m src.data.data_preprocessing
+    cmd: uv run python -m src.data.data_preprocessing
     deps:
     - path: data/raw/test.csv
       hash: md5
@@ -47,3 +47,97 @@ stages:
       hash: md5
       md5: 75afed98d8cb4d4aefacdf95fca83850
       size: 18069677
+  feature_engineering:
+    cmd: uv run python -m src.features.feature_engineering
+    deps:
+    - path: data/processed/test_processed.csv
+      hash: md5
+      md5: 0b8bddebaec6cbfcc55c53247015d744
+      size: 4520051
+    - path: data/processed/train_processed.csv
+      hash: md5
+      md5: 75afed98d8cb4d4aefacdf95fca83850
+      size: 18069677
+    - path: src/features/feature_engineering.py
+      hash: md5
+      md5: 37cdab1c60ed46d5d04fd456058e6d1a
+      size: 2919
+    params:
+      params.yaml:
+        feature_engineering.features:
+        - dist_km
+        - hour
+        - day
+        - month
+        - year
+        - dayofweek
+        - passenger_count
+        feature_engineering.target: fare_amount
+    outs:
+    - path: data/processed/test_final.csv
+      hash: md5
+      md5: bdc9438ea261b2c408366ebf36f3870c
+      size: 5796616
+    - path: data/processed/train_final.csv
+      hash: md5
+      md5: 6613a36912d38d586f1c6c97d173e824
+      size: 23186951
+    - path: models/scaler.pkl
+      hash: md5
+      md5: 50ebfbf012fa418cc1c5974c30fd2844
+      size: 739
+  model_building:
+    cmd: uv run python -m src.models.model_building
+    deps:
+    - path: data/processed/train_final.csv
+      hash: md5
+      md5: 6613a36912d38d586f1c6c97d173e824
+      size: 23186951
+    - path: src/models/model_building.py
+      hash: md5
+      md5: 5661e613e7bac35f67a79a9450b4b18c
+      size: 1737
+    params:
+      params.yaml:
+        model_building.max_depth: 10
+        model_building.max_leaf_nodes: 32
+    outs:
+    - path: models/model.pkl
+      hash: md5
+      md5: e4007b0182eeaca716333f42c9395cf8
+      size: 5709
+  model_evaluation:
+    cmd: uv run python -m src.models.model_evaluation
+    deps:
+    - path: data/processed/test_final.csv
+      hash: md5
+      md5: bdc9438ea261b2c408366ebf36f3870c
+      size: 5796616
+    - path: models/model.pkl
+      hash: md5
+      md5: e4007b0182eeaca716333f42c9395cf8
+      size: 5709
+    - path: src/models/model_evaluation.py
+      hash: md5
+      md5: a043061b996155a489c0c5dfbe122355
+      size: 5178
+    outs:
+    - path: reports/experiment_info.json
+      hash: md5
+      md5: 363348f69044646886a860aa32f36de7
+      size: 103
+    - path: reports/metrics.json
+      hash: md5
+      md5: 98eabab3d666766e9000c9d215aa19a8
+      size: 98
+  model_registration:
+    cmd: uv run python -m src.models.register_model
+    deps:
+    - path: reports/experiment_info.json
+      hash: md5
+      md5: 363348f69044646886a860aa32f36de7
+      size: 103
+    - path: src/models/register_model.py
+      hash: md5
+      md5: 9ddf93d1c2c9e2844b708e5bbfd3cca6
+      size: 1410

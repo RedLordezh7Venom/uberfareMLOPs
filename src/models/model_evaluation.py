@@ -97,13 +97,34 @@ def main():
             logging.info("Logging metrics and model to MLflow...")
             mlflow.log_metrics(metrics)
             mlflow.log_params(config['model_building'])
-            mlflow.sklearn.log_model(model, "model")
+            
+            # Build input example to help the registry discover the model
+            input_example = X_test.head(5) 
+
+            # Direct Registration: This is the most robust way to solve the "Unable to find" sync issue.
+            # It registers the model while the upload connection is still active.
+            logging.info("Registering model directly during upload...")
+            model_info_registry = mlflow.sklearn.log_model(
+                model, 
+                "model", 
+                input_example=input_example,
+                pip_requirements=["scikit-learn", "pandas", "numpy"],
+                registered_model_name="UberFareRegressor"
+            )
             
             # Log artifacts
             mlflow.log_artifact('reports/metrics.json')
 
-            # 6. Save Model Info (For Registry)
+            # 6. Save Model Info (For Registry Script to handle Stage Transition)
+            model_version = model_info_registry.registered_model_version
             save_model_info(run.info.run_id, "model", 'reports/experiment_info.json')
+            
+            # Add version to info for easier transition later
+            with open('reports/experiment_info.json', 'r') as f:
+                info = json.load(f)
+            info['version'] = model_version
+            with open('reports/experiment_info.json', 'w') as f:
+                json.dump(info, f, indent=4)
             
             logging.info(f"✅ Evaluation Complete. RMSE: {metrics['rmse']}")
 

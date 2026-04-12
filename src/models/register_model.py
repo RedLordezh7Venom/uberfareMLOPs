@@ -5,70 +5,39 @@ from src.logger import logging
 import os
 import dagshub
 
-import warnings
-warnings.simplefilter("ignore", UserWarning)
-warnings.filterwarnings("ignore")
-
-# --- PRODUCTION USE (Commented out) ---
-# dagshub_token = os.getenv("CAPSTONE_TEST")
-# if not dagshub_token:
-#     raise EnvironmentError("CAPSTONE_TEST environment variable is not set")
-# os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
-# os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
-# dagshub_url = "https://dagshub.com"
-# repo_owner = "RedLordezh7Venom"
-# repo_name = "uberfareMLOPs"
-# mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
-
-# --- LOCAL USE ---
-dagshub.init(repo_owner='RedLordezh7Venom', repo_name='uberfareMLOPs', mlflow=True)
-
 def load_model_info(file_path: str) -> dict:
-    """Load the model info from a JSON file."""
-    try:
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Experiment info file {file_path} not found. Run evaluation first.")
-        with open(file_path, 'r') as file:
-            model_info = json.load(file)
-        logging.info(f'Model info loaded from {file_path}')
-        return model_info
-    except Exception as e:
-        logging.error(f'Error loading model info: {e}')
-        raise
+    with open(file_path, 'r') as file:
+        return json.load(file)
 
-def register_model(model_name: str, model_info: dict):
-    """Register the model to the MLflow Model Registry."""
+def transition_to_staging(model_name: str, version: int):
+    """Transition the already registered model version to Staging."""
     try:
-        model_uri = f"runs:/{model_info['run_id']}/{model_info['model_path']}"
-        logging.info(f"Registering model from URI: {model_uri}")
-        
-        # Register the model
-        model_version = mlflow.register_model(model_uri, model_name)
-        
-        # Transition the model to "Staging" stage
         client = mlflow.tracking.MlflowClient()
+        logging.info(f"Transitioning {model_name} version {version} to Staging...")
+        
         client.transition_model_version_stage(
             name=model_name,
-            version=model_version.version,
+            version=version,
             stage="Staging"
         )
-        
-        logging.info(f'✅ Model {model_name} version {model_version.version} registered and transitioned to Staging.')
+        logging.info(f"✅ Model {model_name} version {version} is now in STAGING.")
     except Exception as e:
-        logging.error(f'Error during model registration: {e}')
+        logging.error(f"Error during stage transition: {e}")
         raise
 
 def main():
     try:
-        logging.info("--- Model Registration Process Started ---")
-        model_info_path = 'reports/experiment_info.json'
-        model_info = load_model_info(model_info_path)
+        logging.info("--- Model Lifecycle Management Started ---")
+        dagshub.init(repo_owner='RedLordezh7Venom', repo_name='uberfareMLOPs', mlflow=True)
         
-        # You can change this name to 'Uber_Fare_Best_Model' or similar
+        model_info = load_model_info('reports/experiment_info.json')
         model_name = "UberFareRegressor"
-        register_model(model_name, model_info)
+        
+        # Transition the version that was just created by evaluation script
+        transition_to_staging(model_name, model_info['version'])
+        
     except Exception as e:
-        logging.error(f'Failed to complete the model registration process: {e}', exc_info=True)
+        logging.error(f"❌ Lifecycle Transition Failed: {e}")
 
 if __name__ == '__main__':
     main()
