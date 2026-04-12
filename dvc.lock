@@ -1,0 +1,49 @@
+schema: '2.0'
+stages:
+  data_ingestion:
+    cmd: python -m src.data.data_ingestion
+    deps:
+    - path: data/raw/uber.csv
+      hash: md5
+      md5: 9fb1c86268acf4f5025e8078cb1282ca
+      size: 23458139
+    - path: src/data/data_ingestion.py
+      hash: md5
+      md5: 0f84482df86a2fb4ca30c7be7db79699
+      size: 2637
+    params:
+      params.yaml:
+        data_ingestion.test_size: 0.2
+    outs:
+    - path: data/raw/test.csv
+      hash: md5
+      md5: 899a48ab36975b055cfd98f13ae765dd
+      size: 3127235
+    - path: data/raw/train.csv
+      hash: md5
+      md5: 3a7a008fa7ae4904ec3f509750b7176e
+      size: 12500158
+  data_preprocessing:
+    cmd: python -m src.data.data_preprocessing
+    deps:
+    - path: data/raw/test.csv
+      hash: md5
+      md5: 899a48ab36975b055cfd98f13ae765dd
+      size: 3127235
+    - path: data/raw/train.csv
+      hash: md5
+      md5: 3a7a008fa7ae4904ec3f509750b7176e
+      size: 12500158
+    - path: src/data/data_preprocessing.py
+      hash: md5
+      md5: bb890965e5a634d1bcadb1e9b6e52bdd
+      size: 4068
+    outs:
+    - path: data/processed/test_processed.csv
+      hash: md5
+      md5: 0b8bddebaec6cbfcc55c53247015d744
+      size: 4520051
+    - path: data/processed/train_processed.csv
+      hash: md5
+      md5: 75afed98d8cb4d4aefacdf95fca83850
+      size: 18069677

@@ -21,11 +21,11 @@ stages:
     - data/processed/test_processed.csv
 
   feature_engineering:
-    cmd: python -m src.features.build_features
+    cmd: python -m src.features.feature_engineering
     deps:
     - data/processed/train_processed.csv
     - data/processed/test_processed.csv
-    - src/features/build_features.py
+    - src/features/feature_engineering.py
     params:
     - feature_engineering.features
     - feature_engineering.target
