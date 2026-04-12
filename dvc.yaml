@@ -1,0 +1,63 @@
+stages:
+  data_ingestion:
+    cmd: python -m src.data.data_ingestion
+    deps:
+    - data/raw/uber.csv
+    - src/data/data_ingestion.py
+    params:
+    - data_ingestion.test_size
+    outs:
+    - data/raw/train.csv
+    - data/raw/test.csv
+
+  data_preprocessing:
+    cmd: python -m src.data.data_preprocessing
+    deps:
+    - data/raw/train.csv
+    - data/raw/test.csv
+    - src/data/data_preprocessing.py
+    outs:
+    - data/processed/train_processed.csv
+    - data/processed/test_processed.csv
+
+  feature_engineering:
+    cmd: python -m src.features.build_features
+    deps:
+    - data/processed/train_processed.csv
+    - data/processed/test_processed.csv
+    - src/features/build_features.py
+    params:
+    - feature_engineering.features
+    - feature_engineering.target
+    outs:
+    - data/processed/train_final.csv
+    - data/processed/test_final.csv
+    - models/scaler.pkl
+
+  model_building:
+    cmd: python -m src.models.model_building
+    deps:
+    - data/processed/train_final.csv
+    - src/models/model_building.py
+    params:
+    - model_building.max_depth
+    - model_building.max_leaf_nodes
+    outs:
+    - models/model.pkl
+
+  model_evaluation:
+    cmd: python -m src.models.model_evaluation
+    deps:
+    - models/model.pkl
+    - data/processed/test_final.csv
+    - src/models/model_evaluation.py
+    metrics:
+    - reports/metrics.json
+    outs:
+    - reports/experiment_info.json
+
+  model_registration:
+    cmd: python -m src.models.register_model
+    deps:
+    - reports/experiment_info.json
+    - src/models/register_model.py
