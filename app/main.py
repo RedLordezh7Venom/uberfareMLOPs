@@ -1,22 +1,16 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, Response
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import mlflow
 import pickle
 import os
 import pandas as pd
 import time
-import dagshub
 from prometheus_client import Counter, Histogram, generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST
 from app.utils import transform_input_data
 
-# --- MLflow / DagsHub Config ---
-dagshub.init(repo_owner='RedLordezh7Venom', repo_name='uberfareMLOPs', mlflow=True)
-
-app = FastAPI(title="Uber Fare Prediction Service")
-
-# Prometheus setup
+# Prometheus setup (module-level is fine — no auth needed)
 registry = CollectorRegistry()
 REQUEST_COUNT = Counter(
     "app_request_count", "Total number of requests", ["method", "endpoint"], registry=registry
@@ -28,31 +22,50 @@ PREDICTION_VALUE = Histogram(
     "model_prediction_fare_amount", "Distribution of predicted fares", registry=registry
 )
 
-# Template setup
 templates = Jinja2Templates(directory="app/templates")
 
-# --- Model & Scaler Loading ---
+# Global state populated at startup
+SCALER = None
+MODEL = None
+VERSION = "unknown"
+
+def setup_mlflow():
+    """Authenticate with DagsHub/MLflow. Works in both CI and local."""
+    dagshub_token = os.getenv("CAPSTONE_TEST")
+    if dagshub_token:
+        os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+        os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+        mlflow.set_tracking_uri("https://dagshub.com/RedLordezh7Venom/uberfareMLOPs.mlflow")
+    else:
+        import dagshub
+        dagshub.init(repo_owner='RedLordezh7Venom', repo_name='uberfareMLOPs', mlflow=True)
+
 def load_assets():
+    global SCALER, MODEL, VERSION
     # 1. Load Scaler
-    scaler_path = 'models/scaler.pkl'
-    with open(scaler_path, 'rb') as f:
-        scaler = pickle.load(f)
-    
-    # 2. Load latest model from Staging
+    with open('models/scaler.pkl', 'rb') as f:
+        SCALER = pickle.load(f)
+
+    # 2. Load model — try registry first, fall back to local
+    setup_mlflow()
     model_name = "UberFareRegressor"
     client = mlflow.MlflowClient()
     try:
         latest_version = client.get_latest_versions(model_name, stages=["Staging"])[0].version
-        model_uri = f'models:/{model_name}/{latest_version}'
-        model = mlflow.pyfunc.load_model(model_uri)
-        return scaler, model, latest_version
+        MODEL = mlflow.pyfunc.load_model(f'models:/{model_name}/{latest_version}')
+        VERSION = latest_version
     except Exception as e:
-        print(f"Error loading model from registry: {e}")
-        # Fallback to local if registry fails
-        model = pickle.load(open('models/model.pkl', 'rb'))
-        return scaler, model, "local"
+        print(f"Registry load failed ({e}), falling back to local model.")
+        MODEL = pickle.load(open('models/model.pkl', 'rb'))
+        VERSION = "local"
 
-SCALER, MODEL, VERSION = load_assets()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Run startup logic ONLY when the server actually starts — not on import."""
+    load_assets()
+    yield
+
+app = FastAPI(title="Uber Fare Prediction Service", lifespan=lifespan)
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -72,28 +85,21 @@ async def predict(
     start_time = time.time()
     REQUEST_COUNT.labels(method="POST", endpoint="/predict").inc()
 
-    # 1. Transform raw inputs
     df_features = transform_input_data(
-        pickup_datetime, pickup_longitude, pickup_latitude, 
+        pickup_datetime, pickup_longitude, pickup_latitude,
         dropoff_longitude, dropoff_latitude, passenger_count
     )
-    
-    # 2. Apply Scaling
-    target_col = "fare_amount" # The model expects the features we trained on
-    # Note: We need to ensure the columns match the scaler's expectations
+
     features_list = ["dist_km", "hour", "day", "month", "year", "dayofweek", "passenger_count"]
     X_scaled = SCALER.transform(df_features[features_list])
-    
-    # 3. Predict
     prediction = MODEL.predict(pd.DataFrame(X_scaled, columns=features_list))
     fare = round(float(prediction[0]), 2)
 
-    # Metrics
     PREDICTION_VALUE.observe(fare)
     REQUEST_LATENCY.labels(endpoint="/predict").observe(time.time() - start_time)
 
     return templates.TemplateResponse(request=request, name="index.html", context={
-        "result": f"${fare}", 
+        "result": f"${fare}",
         "version": VERSION
     })
 
