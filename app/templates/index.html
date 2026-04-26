@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uber Fare Predictor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --uber-black: #000000;
+            --uber-white: #FFFFFF;
+            --uber-gray: #F6F6F6;
+            --uber-blue: #276EF1;
+            --uber-light-gray: #EEEEEE;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--uber-gray);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background: var(--uber-white);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        @media(min-width: 768px) {
+            .container {
+                flex-direction: row;
+                height: 500px;
+            }
+        }
+        .map-section {
+            flex: 1;
+            min-height: 300px;
+            position: relative;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        .form-section {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        h1 { font-size: 1.5rem; margin-top: 0; margin-bottom: 0.5rem; color: var(--uber-black); }
+        p.subtitle { color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; }
+        
+        .form-group { margin-bottom: 1.2rem; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #333; font-weight: 600; }
+        input[type="datetime-local"], input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--uber-light-gray);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+            background-color: var(--uber-light-gray);
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--uber-black);
+            background-color: var(--uber-white);
+        }
+        
+        .location-status {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .status-badge {
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #E2E2E2;
+        }
+        .status-badge.active { border-color: var(--uber-black); background-color: #F8F8F8;}
+        .status-badge.set { border-color: var(--uber-blue); background-color: #E7F3FF; color: var(--uber-blue); }
+        .indicator { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
+        .pickup .indicator { background: var(--uber-black); }
+        .dropoff .indicator { background: var(--uber-blue); }
+
+        button.submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--uber-black);
+            color: var(--uber-white);
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: auto;
+            transition: background 0.2s;
+        }
+        button.submit-btn:hover { background: #333; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .result {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #E7F3FF;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: var(--uber-blue);
+        }
+        .footer { margin-top: 1rem; font-size: 0.75rem; color: #999; text-align: center; }
+        
+        .map-overlay {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            font-size: 0.85rem;
+            font-weight: 600;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="map-section">
+            <div id="instruction-overlay" class="map-overlay">Click map to set Pickup</div>
+            <div id="map"></div>
+        </div>
+        
+        <div class="form-section">
+            <h1>Request a Ride</h1>
+            <p class="subtitle">Select your locations on the map</p>
+            
+            <div class="location-status">
+                <div id="pickup-status" class="status-badge active pickup">
+                    <div class="indicator"></div>
+                    <span>Waiting for Pickup Location...</span>
+                </div>
+                <div id="dropoff-status" class="status-badge dropoff">
+                    <div class="indicator"></div>
+                    <span>Waiting for Dropoff Location...</span>
+                </div>
+            </div>
+
+            <form action="/predict" method="post" id="ride-form">
+                <!-- Hidden inputs populated by map clicks -->
+                <input type="hidden" id="pickup_longitude" name="pickup_longitude" required>
+                <input type="hidden" id="pickup_latitude" name="pickup_latitude" required>
+                <input type="hidden" id="dropoff_longitude" name="dropoff_longitude" required>
+                <input type="hidden" id="dropoff_latitude" name="dropoff_latitude" required>
+
+                <div class="form-group">
+                    <label>Pickup Time</label>
+                    <input type="datetime-local" id="pickup_datetime" name="pickup_datetime" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Passengers</label>
+                    <input type="number" name="passenger_count" value="1" min="1" max="6" required>
+                </div>
+                
+                <button type="submit" id="submit-btn" class="submit-btn" disabled>Estimate Fare</button>
+            </form>
+
+            {% if result %}
+            <div class="result">
+                Estimated Fare: {{ result }}
+            </div>
+            {% endif %}
+
+            <div class="footer">
+                Model Version: {{ version }} | Metrics active at /metrics
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize datetime to current time
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('pickup_datetime').value = now.toISOString().slice(0,16);
+
+        // Initialize Map (Centered on New York, typical for Uber datasets)
+        const map = L.map('map').setView([40.75, -73.98], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        let pickupMarker = null;
+        let dropoffMarker = null;
+        let selectionMode = 'pickup'; // 'pickup' or 'dropoff'
+
+        const pickupStatus = document.getElementById('pickup-status');
+        const dropoffStatus = document.getElementById('dropoff-status');
+        const instructionOverlay = document.getElementById('instruction-overlay');
+        const submitBtn = document.getElementById('submit-btn');
+
+        // Custom Icons
+        const pickupIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div style="background-color: black; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4);"></div>`,
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+        });
+
+        const dropoffIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div style="background-color: #276EF1; width: 14px; height: 14px; border-radius: 0%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4);"></div>`,
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+        });
+
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+
+            if (selectionMode === 'pickup') {
+                // Set Pickup
+                if (pickupMarker) map.removeLayer(pickupMarker);
+                pickupMarker = L.marker([lat, lng], {icon: pickupIcon}).addTo(map);
+                
+                document.getElementById('pickup_latitude').value = lat;
+                document.getElementById('pickup_longitude').value = lng;
+                
+                pickupStatus.classList.remove('active');
+                pickupStatus.classList.add('set');
+                pickupStatus.querySelector('span').innerText = 'Pickup Set';
+                
+                // Switch to Dropoff mode
+                selectionMode = 'dropoff';
+                dropoffStatus.classList.add('active');
+                instructionOverlay.innerText = "Click map to set Dropoff";
+
+            } else if (selectionMode === 'dropoff') {
+                // Set Dropoff
+                if (dropoffMarker) map.removeLayer(dropoffMarker);
+                dropoffMarker = L.marker([lat, lng], {icon: dropoffIcon}).addTo(map);
+                
+                document.getElementById('dropoff_latitude').value = lat;
+                document.getElementById('dropoff_longitude').value = lng;
+                
+                dropoffStatus.classList.remove('active');
+                dropoffStatus.classList.add('set');
+                dropoffStatus.querySelector('span').innerText = 'Dropoff Set';
+                
+                instructionOverlay.innerText = "Ready for Estimate";
+                
+                // Enable Submit button
+                submitBtn.disabled = false;
+                
+                // Fit bounds to show both markers
+                const bounds = L.latLngBounds([pickupMarker.getLatLng(), dropoffMarker.getLatLng()]);
+                map.fitBounds(bounds, {padding: [50, 50]});
+                
+                // Reset mode to allow changing pickup again if they want
+                selectionMode = 'pickup';
+                pickupStatus.classList.add('active');
+                dropoffStatus.classList.remove('active');
+                instructionOverlay.innerText = "Click to change Pickup";
+            }
+        });
+    </script>
+</body>
+</html>
