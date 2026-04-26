@@ -51,3 +51,23 @@ jobs:
           CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
         run: |
           dvc repro
+
+      - name: Run Model Tests
+        env:
+          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+        run: |
+          python -m unittest tests/test_model.py
+
+      - name: Promote Model to Production
+        if: github.ref == 'refs/heads/main' && success()
+        env:
+          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+        run: |
+          python scripts/promote_model.py
+
+      - name: Run FastAPI App Tests
+        if: success()
+        env:
+          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+        run: |
+          python -m unittest tests/test_app.py
