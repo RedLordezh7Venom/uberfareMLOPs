@@ -1,6 +1,8 @@
 import os
 import mlflow
-from src.logger import logging
+import logging
+
+logging.basicConfig(level=logging.INFO, format="[ %(asctime)s ] %(levelname)s - %(message)s")
 
 def promote_model():
     """Promotes the latest Staging model to Production and archives old ones."""
