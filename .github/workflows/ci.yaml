@@ -28,7 +28,8 @@ jobs:
         run: |
           uv pip install --system \
             pandas numpy scikit-learn \
-            "dvc[s3]" dagshub mlflow python-dotenv
+            "dvc[s3]" dagshub mlflow python-dotenv \
+            fastapi uvicorn jinja2 prometheus-client httpx python-multipart
 
       - name: Configure DVC Remote (DagsHub S3)
         env:
