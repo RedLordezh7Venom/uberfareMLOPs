@@ -77,8 +77,14 @@ target/
 # Jupyter NB Checkpoints
 .ipynb_checkpoints/
 
-# exclude data from source control by default
-/data/
+# DVC manages its own .gitignore files inside data/ subdirectories.
+# Do NOT ignore /data/ here — only ignore specific large file types.
+data/raw/uber.csv
+data/raw/train.csv
+data/raw/test.csv
+data/processed/
+data/external/
+data/interim/
 /local_s3/
 
 # Mac OS-specific storage files
