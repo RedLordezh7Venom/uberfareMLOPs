@@ -44,7 +44,7 @@ jobs:
         env:
           CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
         run: |
-          dvc pull --run-cache
+          dvc pull data/raw/uber.csv.dvc
 
       - name: Run DVC Pipeline
         env:

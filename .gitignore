@@ -79,6 +79,8 @@ target/
 
 # exclude data from source control by default
 /data/
+# but allow .dvc tracking files so CI can pull data
+!/data/**/*.dvc
 /local_s3/
 
 # Mac OS-specific storage files
