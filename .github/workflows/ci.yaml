@@ -1,4 +1,4 @@
-name: Uber Fare CI/CD Pipeline
+name: Uber Fare CI Pipeline
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
 jobs:
   mlops-pipeline:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -18,58 +19,35 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install UV and Dependencies
+      - name: Install UV
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          uv pip install --system -r requirements.txt
-          uv pip install --system "dvc[s3]" dagshub mlflow uvicorn fastapi pytest httpx python-multipart
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: DVC Remote Setup
+      - name: Install Dependencies
+        run: |
+          uv pip install --system \
+            pandas numpy scikit-learn \
+            "dvc[s3]" dagshub mlflow python-dotenv
+
+      - name: Configure DVC Remote (DagsHub S3)
         env:
           CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
         run: |
-          dvc remote add -d storage s3://dvc
-          dvc remote modify storage endpointurl https://dagshub.com/RedLordezh7Venom/uberfareMLOPs.s3
-          dvc remote modify storage access_key_id ${{ secrets.CAPSTONE_TEST }}
-          dvc remote modify storage secret_access_key ${{ secrets.CAPSTONE_TEST }}
+          # Override the local default remote with the DagsHub cloud remote
+          dvc remote add -d dagshub_remote s3://dvc --force
+          dvc remote modify dagshub_remote endpointurl https://dagshub.com/RedLordezh7Venom/uberfareMLOPs.s3
+          dvc remote modify dagshub_remote access_key_id $CAPSTONE_TEST
+          dvc remote modify dagshub_remote secret_access_key $CAPSTONE_TEST
 
-      - name: Pull Data from DVC Remote
+      - name: Pull Raw Data
         env:
           CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
         run: |
-          dvc pull data/raw/uber.csv
-          
+          dvc pull --run-cache
+
       - name: Run DVC Pipeline
         env:
           CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
         run: |
           dvc repro
-
-      - name: Run Model Registry Promotion
-        if: success()
-        env:
-          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
-        run: |
-          python -m src.models.register_model
-
-      - name: Build Docker Image
-        if: success()
-        run: |
-          docker build -t uber-fare-app:latest .
-
-      - name: AWS Authentication & ECR Push
-        if: github.ref == 'refs/heads/main'
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set region ${{ secrets.AWS_REGION }}
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          docker tag uber-fare-app:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
-
-      - name: Deploy to EKS
-        if: github.ref == 'refs/heads/main'
-        uses: azure/setup-kubectl@v3
-      - run: |
-          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name uber-fare-cluster
-          kubectl apply -f deployment.yaml

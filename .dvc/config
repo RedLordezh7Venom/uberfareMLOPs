@@ -2,3 +2,8 @@
     remote = mylocal
 ['remote "mylocal"']
     url = ../local_s3
+['remote "dagshub_remote"']
+    url = s3://dvc
+    endpointurl = https://dagshub.com/RedLordezh7Venom/uberfareMLOPs.s3
+    access_key_id = 9ed0f21c919358746387a2e9de614d873406a771
+    secret_access_key = 9ed0f21c919358746387a2e9de614d873406a771

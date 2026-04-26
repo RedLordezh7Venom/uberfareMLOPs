@@ -49,26 +49,19 @@ def main():
         logging.info("--- Model Evaluation Process Started ---")
         config = load_params('params.yaml')
         
-        # Init DagsHub
-        # Below code block is for production use
-        # # -------------------------------------------------------------------------------------
-        # # Set up DagsHub credentials for MLflow tracking
-        # dagshub_token = os.getenv("CAPSTONE_TEST")
-        # if not dagshub_token:
-        #     raise EnvironmentError("CAPSTONE_TEST environment variable is not set")
+        # --- MLflow / DagsHub Auth ---
+        # In CI: CAPSTONE_TEST env var is set → use token-based auth (no browser needed)
+        # Locally: falls back to dagshub.init() which opens a browser for OAuth
+        dagshub_token = os.getenv("CAPSTONE_TEST")
+        if dagshub_token:
+            os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+            os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+            mlflow.set_tracking_uri("https://dagshub.com/RedLordezh7Venom/uberfareMLOPs.mlflow")
+            logging.info("Using token-based DagsHub auth (CI mode).")
+        else:
+            dagshub.init(repo_owner='RedLordezh7Venom', repo_name='uberfareMLOPs', mlflow=True)
+            logging.info("Using interactive DagsHub auth (local mode).")
 
-        # os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
-        # os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
-
-        # dagshub_url = "https://dagshub.com"
-        # repo_owner = "vikashdas770"
-        # repo_name = "YT-Capstone-Project"
-
-        # # Set up MLflow tracking URI
-        # mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
-        # # -------------------------------------------------------------------------------------
-
-        dagshub.init(repo_owner='RedLordezh7Venom', repo_name='uberfareMLOPs')
         mlflow.set_experiment("UberFare_Production_Pipeline")
 
         with mlflow.start_run() as run:

@@ -28,7 +28,13 @@ def transition_to_staging(model_name: str, version: int):
 def main():
     try:
         logging.info("--- Model Lifecycle Management Started ---")
-        dagshub.init(repo_owner='RedLordezh7Venom', repo_name='uberfareMLOPs', mlflow=True)
+        dagshub_token = os.getenv("CAPSTONE_TEST")
+        if dagshub_token:
+            os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+            os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+            mlflow.set_tracking_uri("https://dagshub.com/RedLordezh7Venom/uberfareMLOPs.mlflow")
+        else:
+            dagshub.init(repo_owner='RedLordezh7Venom', repo_name='uberfareMLOPs', mlflow=True)
         
         model_info = load_model_info('reports/experiment_info.json')
         model_name = "UberFareRegressor"
