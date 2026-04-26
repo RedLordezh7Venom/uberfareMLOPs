@@ -33,6 +33,12 @@ jobs:
           dvc remote modify storage access_key_id ${{ secrets.CAPSTONE_TEST }}
           dvc remote modify storage secret_access_key ${{ secrets.CAPSTONE_TEST }}
 
+      - name: Pull Data from DVC Remote
+        env:
+          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+        run: |
+          dvc pull
+          
       - name: Run DVC Pipeline
         env:
           CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
