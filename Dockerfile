@@ -4,17 +4,20 @@ FROM python:3.12-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file into the container
+# Copy only the requirements file first (leverages Docker layer cache)
 COPY requirements.txt .
 
-# Install any needed packages specified in requirements.txt
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the current directory contents into the container at /app
-# We selectively copy to keep the image small, but for simplicity we can copy the needed folders
+# Copy application code
 COPY app/ ./app/
-COPY models/ ./models/
 COPY params.yaml .
+
+# models/ is intentionally NOT copied here.
+# At startup, load_assets() in app/main.py will pull the model from
+# the MLflow/DagsHub registry using the CAPSTONE_TEST env variable.
+# If the registry is unavailable, ensure models/model.pkl is volume-mounted.
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
