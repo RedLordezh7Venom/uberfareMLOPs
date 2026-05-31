@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uber-fare-app
+  labels:
+    app: uber-fare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: uber-fare
+  template:
+    metadata:
+      labels:
+        app: uber-fare
+    spec:
+      containers:
+      - name: app
+        image: localhost:5100/uber-fare-app:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        env:
+        - name: CAPSTONE_TEST
+          value: "0017c80a569f5943c0796b444bb64167fcb71926"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: uber-fare-service
+spec:
+  type: NodePort
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30080
+  selector:
+    app: uber-fare
