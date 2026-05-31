@@ -104,3 +104,34 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:latest"
+
+      # ---------------------------------------------------------------
+      # CD: Deploy to EKS
+      # Additional secrets required: EKS_CLUSTER_NAME
+      # ---------------------------------------------------------------
+      - name: Deploy to EKS
+        if: github.ref == 'refs/heads/main' && success()
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+          EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+        run: |
+          # Connect kubectl to EKS cluster
+          aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region ${{ secrets.AWS_REGION }}
+
+          # Update deployment.yaml to use the freshly-pushed ECR image
+          sed -i "s|image:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|" deployment.yaml
+
+          # Inject the DagsHub token into the deployment manifest
+          sed -i "s|value: \".*\"  # CAPSTONE_TEST|value: \"$CAPSTONE_TEST\"  # CAPSTONE_TEST|" deployment.yaml
+
+          # Apply to EKS
+          kubectl apply -f deployment.yaml
+
+          # Wait for rollout to complete
+          kubectl rollout status deployment/uber-fare-app --timeout=120s
+
+          # Print service info (get external LoadBalancer IP)
+          kubectl get svc uber-fare-service
