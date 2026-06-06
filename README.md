@@ -306,6 +306,9 @@ Three custom metrics are exposed at `/metrics`:
 - `app_request_latency_seconds` — request latency histogram by endpoint
 - `model_prediction_fare_amount` — distribution of predicted fares
 
+> **Monitoring Infrastructure Setup:** For full instructions on provisioning EC2 instances, installing Prometheus (the metrics scraper), and setting up Grafana (the visualization dashboard), see the detailed guide:  
+> 🔗 [Monitoring Setup Guide: Prometheus & Grafana](docs/prometheus_grafana_setup.md)
+
 ---
 
 ## CI/CD Pipeline
