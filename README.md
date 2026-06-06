@@ -38,6 +38,9 @@ Raw Data (DagsHub S3)
         │
         ▼
  Docker → ECR → EKS       ← containerized, deployed to Kubernetes
+        │
+        ▼
+ Prometheus & Grafana     ← scrapes metrics and visualizes dashboards
 ```
 
 ---
@@ -339,6 +342,8 @@ Login to Amazon ECR
 Build, Tag & Push Docker Image to ECR
     ↓
 Deploy to EKS                   ← kubectl apply, rollout status
+    ↓
+Prometheus & Grafana Monitor    ← active scraper pulls live metrics from EKS
 ```
 
 ### Required GitHub Secrets
