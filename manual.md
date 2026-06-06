@@ -219,6 +219,21 @@ PREDICTION_VALUE.observe(fare)
 * **Line 2 (`Histogram...`):** Tracks the distribution of data. Instead of just a count, it groups data into "buckets" (e.g., how many fares were $10-$20, $20-$30).
 * **Line 5 (`PREDICTION_VALUE.observe(fare)`):** After the model predicts a fare, that value is logged. If Grafana suddenly shows all predicted fares are $0, we know the model is failing silently.
 
+### Infrastructure Setup (AWS EC2)
+While the FastAPI application code exposes the `/metrics` endpoint, the actual Prometheus scraper and Grafana dashboard must be hosted on external infrastructure to maintain a decoupled architecture. 
+
+**Step 1: Setting up Prometheus**
+1. **Launch EC2:** Provision an Ubuntu `t3.medium` instance with 20GB SSD. Allow inbound traffic on port `9090` (Web UI) and `22` (SSH).
+2. **Install:** SSH into the instance, download the raw binary (`wget https://github.com/prometheus/prometheus/releases/download/v2.46.0/prometheus-2.46.0.linux-amd64.tar.gz`), extract it, and move it to `/usr/local/bin`.
+3. **Configure:** Create `/etc/prometheus/prometheus.yml`. Under `scrape_configs`, add the `targets: ["<your-eks-lb-ip>:8000"]` so Prometheus knows exactly which IP to ping every 15 seconds.
+4. **Run:** Execute the binary `/usr/local/bin/prometheus --config.file=/etc/prometheus/prometheus.yml` to start the pull-model scraper.
+
+**Step 2: Setting up Grafana**
+1. **Launch EC2:** Provision a second Ubuntu `t3.medium` instance. Allow inbound traffic on port `3000` (Web UI) and `22` (SSH).
+2. **Install:** SSH into the instance and install the Debian package via `apt` (`wget https://dl.grafana.com/oss/release/grafana_10.1.5_amd64.deb` then `sudo apt install ./grafana_10.1.5_amd64.deb -y`).
+3. **Run as Service:** Unlike Prometheus, Grafana is installed as a system service. Start and enable it using `sudo systemctl start grafana-server` and `sudo systemctl enable grafana-server`.
+4. **Connect:** Open `http://<grafana-ip>:3000` in your browser. Add a new Prometheus Data Source and paste in `http://<prometheus-ip>:9090`. Now you can write PromQL queries to build live dashboards!
+
 ---
 
 ## 9. DagsHub & MLflow Tracking
